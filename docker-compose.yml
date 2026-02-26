@@ -1,0 +1,109 @@
+version: "3.9"
+
+services:
+# Unified Storage Layer: Handles Airflow Metadata, App Data, and Vector Embeddings
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: llmrca-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+# Workflow Orchestrator: Executes Hydraulic Pipeline DAGs
+  airflow:
+    build: ./services/airflow
+    container_name: llmrca-airflow
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      AIRFLOW__CORE__LOAD_EXAMPLES: "False"
+      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: "False"
+      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "True"
+      
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PORT: "5432"
+
+      FAILURE_MODE: ${FAILURE_MODE}
+      HYDRAULIC_CSV_PATH: /opt/airflow/data/hydraulic_features.csv
+    user: "${AIRFLOW_UID}:0"
+    volumes:
+      - ./services/airflow/dags:/opt/airflow/dags
+      - ./services/airflow/logs:/opt/airflow/logs
+      - ./services/airflow/plugins:/opt/airflow/plugins
+      - ./data:/opt/airflow/data:ro
+    ports:
+      - "8083:8080"
+    command: >
+      bash -lc "
+      airflow db migrate &&
+      airflow users create
+        --username admin
+        --password admin
+        --firstname Admin
+        --lastname User
+        --role Admin
+        --email admin@example.com || true &&
+      airflow scheduler & exec airflow webserver
+      "
+ # Reasoning Engine: LangGraph-based Agent Service
+  rca-agent:
+    build: ./services/rca-agent
+    container_name: llmrca-rca-agent
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PORT: "5432"  
+      
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      
+      GROQ_API_KEY: ${GROQ_API_KEY}
+      GROQ_MODEL: ${GROQ_MODEL}
+
+      RCA_POLL_SECONDS: "2"
+      RCA_MAX_TOKENS: "700"
+      RCA_LOG_FETCH_ROWS: "15"
+      PYTHONUNBUFFERED: "1"
+    command: ["python", "-m", "rca_agent"]
+
+# Visualization Layer: Human-in-the-Loop Dashboard
+  streamlit:
+    build: ./services/streamlit
+    container_name: llmrca-streamlit
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_PORT: "5432"
+      
+    ports:
+      - "${STREAMLIT_PORT}:8501"
+    command: ["streamlit", "run", "app/app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+
+volumes:
+  postgres_data:
