@@ -691,31 +691,31 @@ with tab_rca:
                             for item in ev:
                                 st.markdown(f"- {item}")
 
-                # RAG cards
-                with st.expander(" RAG: Retrieved similar cases", expanded=False):
-                    rc = safe_json(r.retrieved_cases)
-                    if not rc:
-                        st.info("No retrieved cases stored.")
-                    else:
-                        for hit in rc:
-                            sim = float(hit.get("similarity", 0.0))
-                            doc_id = hit.get("doc_id") or hit.get("id", "")[:8]
-                            source = hit.get("source", "kb")
-                            content = hit.get("content", "")
+#                 # RAG cards
+#                 with st.expander(" RAG: Retrieved similar cases", expanded=False):
+#                     rc = safe_json(r.retrieved_cases)
+#                     if not rc:
+#                         st.info("No retrieved cases stored.")
+#                     else:
+#                         for hit in rc:
+#                             sim = float(hit.get("similarity", 0.0))
+#                             doc_id = hit.get("doc_id") or hit.get("id", "")[:8]
+#                             source = hit.get("source", "kb")
+#                             content = hit.get("content", "")
 
-                            st.markdown(
-                                f"""
-<div class="card-plain">
-  <span class="badge">Similarity {sim:.2f}</span>
-  <span class="badge">{source}</span>
-  <span class="badge">{doc_id}</span>
-  <div class="hr"></div>
-  <div style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.55;">{content}</div>
-</div>
-""",
-                                unsafe_allow_html=True,
-                            )
-                            st.markdown(" ")
+#                             st.markdown(
+#                                 f"""
+# <div class="card-plain">
+#   <span class="badge">Similarity {sim:.2f}</span>
+#   <span class="badge">{source}</span>
+#   <span class="badge">{doc_id}</span>
+#   <div class="hr"></div>
+#   <div style="white-space: pre-wrap; font-size: 13.5px; line-height: 1.55;">{content}</div>
+# </div>
+# """,
+#                                 unsafe_allow_html=True,
+#                             )
+#                             st.markdown(" ")
 
                 # Quick copy
                 with st.expander(" Quick copy", expanded=False):

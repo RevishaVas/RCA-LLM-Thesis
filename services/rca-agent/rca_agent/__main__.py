@@ -18,7 +18,7 @@ def finish_job(c, job_id: str, status: str, last_error: str | None = None):
         cur.execute("""
             UPDATE rca_jobs
             SET status=%s,
-                last_error=%s,
+                last_error=%s,  
                 updated_at=now()
             WHERE id=%s;
         """, (status, last_error, job_id))
@@ -55,7 +55,7 @@ if __name__ == "__main__":
                 run_trca(c, incident_id)
 
             with conn() as c:
-                set_incident_status(c, incident_id, "RESOLVED")
+                #set_incident_status(c, incident_id, "RESOLVED")
                 finish_job(c, job_id, "DONE", None)
 
             print(f"[RCA] Job {job_id} DONE")

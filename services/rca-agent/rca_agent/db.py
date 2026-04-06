@@ -24,14 +24,24 @@ def load_incident_bundle(c, incident_id: str):
         if not inc:
             raise ValueError("Incident not found")
 
+        # cur.execute("""
+        #     SELECT source, message, ts
+        #     FROM task_logs
+        #     WHERE incident_id = %s
+        #     ORDER BY ts DESC
+        #     LIMIT 20
+        # """, (incident_id,))
+        # rows = cur.fetchall()
+        # logs_text = "\n\n".join(f"[{ts}][{source}] {msg}" for source, msg, ts in rows)
         cur.execute("""
-            SELECT source, message, ts
-            FROM task_logs
-            WHERE incident_id = %s
-            ORDER BY ts DESC
-            LIMIT 20
+        SELECT source, message, ts
+        FROM task_logs
+        WHERE incident_id = %s
+        ORDER BY ts DESC
+        LIMIT 20
         """, (incident_id,))
         rows = cur.fetchall()
+        rows = list(reversed(rows))
         logs_text = "\n\n".join(f"[{ts}][{source}] {msg}" for source, msg, ts in rows)
 
         cur.execute("""

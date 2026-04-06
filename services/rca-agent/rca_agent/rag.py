@@ -1,4 +1,5 @@
 import json
+import os
 from sentence_transformers import SentenceTransformer
 
 _EMB_MODEL = None
@@ -24,14 +25,29 @@ def retrieve_rag_hits(c, incident_text: str, top_k: int = 4):
         rows = cur.fetchall()
 
     hits = []
+    # for rid, source, doc_id, chunk_id, content, sim in rows:
+    #     hits.append({
+    #         "id": str(rid),
+    #         "source": source,
+    #         "doc_id": doc_id,
+    #         "chunk_id": chunk_id,
+    #         "similarity": float(sim),
+    #         "content": content[:1200],
+    #     })
+
+    MIN_SIMILARITY = float(os.getenv("RAG_MIN_SIMILARITY", "0.33"))
+
     for rid, source, doc_id, chunk_id, content, sim in rows:
+        sim = float(sim)
+        if sim < MIN_SIMILARITY:
+            continue
+
         hits.append({
             "id": str(rid),
             "source": source,
             "doc_id": doc_id,
             "chunk_id": chunk_id,
-            "similarity": float(sim),
+            "similarity": sim,
             "content": content[:1200],
-        })
-
+    })
     return hits, emb

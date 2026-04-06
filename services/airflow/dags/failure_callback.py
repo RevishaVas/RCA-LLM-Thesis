@@ -12,8 +12,10 @@ def log_incident(context):
 
         exc = context.get("exception")
         error_message = str(exc) if exc else "Task failed"
-        tb = traceback.format_exc()
-
+        #tb = traceback.format_exc()
+        tb = "".join(
+        traceback.format_exception(type(exc), exc, exc.__traceback__)
+        ) if exc else ""
         log_text = (
             f"[airflow_failure_callback] {datetime.now(timezone.utc).isoformat()}\n"
             f"dag_id={dag_id}\n"
